@@ -456,7 +456,17 @@ body.overlay-open .app .drag-strip { -webkit-app-region: no-drag; }
   -webkit-app-region: drag;
 }
 .detail-top button { -webkit-app-region: no-drag; }
-.detail-crumb { font-size: 13px; color: var(--muted); }
+.back-btn {
+  height: 32px;
+  padding: 0 12px 0 8px;
+  border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text);
+  transition: background 120ms ease;
+}
+.back-btn:hover { background: var(--chip); }
+.detail-crumb { font-size: 13px; color: var(--muted); margin-left: 14px; }
 .detail-pos { font-size: 11px; color: var(--faint); }
 .detail-nav { margin-left: auto; display: flex; gap: 4px; }
 .detail-canvas {
