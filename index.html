@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-accent="clay" data-density="comfortable">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'none'">
+  <title>Inspiration</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <aside class="sidebar">
+      <div class="drag-strip"></div>
+      <div class="brand">Inspiration<span class="brand-dot">.</span></div>
+
+      <nav class="nav-group" aria-label="Library">
+        <div class="eyebrow">Library</div>
+        <button class="nav-item" data-view="all"><span>Everything</span><span class="nav-count" id="count-all">0</span></button>
+        <button class="nav-item" data-view="recent"><span>Recent</span><span class="nav-count" id="count-recent">0</span></button>
+        <button class="nav-item" data-view="favorites"><span>Favorites</span><span class="nav-count" id="count-favorites">0</span></button>
+      </nav>
+
+      <nav class="nav-group nav-collections" aria-label="Collections">
+        <div class="eyebrow eyebrow-row">
+          <span>Collections</span>
+          <button class="icon-btn small" id="newCollectionBtn" aria-label="New collection" title="New collection">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M7 2v10M2 7h10"/></svg>
+          </button>
+        </div>
+        <div id="collectionsList"></div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="storage-info" id="storageBtn" title="Open storage folder">
+          <span class="storage-path" id="storagePath">~/Inspiration</span>
+          <span class="mono storage-meta" id="storageMeta">LOCAL</span>
+        </button>
+        <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings (⌘,)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main" id="mainContent">
+      <div class="drag-strip"></div>
+      <header class="main-header">
+        <div class="title-block">
+          <div class="eyebrow" id="eyebrow"></div>
+          <h1 class="page-title" id="collectionTitle">Everything</h1>
+        </div>
+        <div class="header-controls">
+          <div class="segmented" id="typeFilter" role="radiogroup" aria-label="Show">
+            <button role="radio" aria-checked="true" data-type="">All</button>
+            <button role="radio" aria-checked="false" data-type="image">Images</button>
+            <button role="radio" aria-checked="false" data-type="url">Links</button>
+          </div>
+          <label class="search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="search" type="search" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false">
+            <span class="kbd">⌘F</span>
+          </label>
+        </div>
+      </header>
+
+      <section class="grid" id="grid" aria-live="polite"></section>
+      <div class="load-more" id="loadMore"></div>
+    </main>
+  </div>
+
+  <form class="command-bar" id="commandBar" autocomplete="off">
+    <button type="button" class="command-plus" id="pickImagesBtn" aria-label="Add images from disk" title="Add images from disk">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <input id="quickInput" type="text" placeholder="Drop images, paste, or type a link…" aria-label="Add a link" spellcheck="false">
+    <span class="kbd kbd-dark">⌘ K</span>
+    <button type="submit" class="command-add">Add</button>
+  </form>
+
+  <div class="drop-overlay" id="dropOverlay" hidden>
+    <div class="drop-card">
+      <div class="drop-title">Drop to add</div>
+      <div class="mono drop-sub" id="dropTarget">TO EVERYTHING</div>
+    </div>
+  </div>
+
+  <section class="detail" id="detail" hidden aria-label="Item details">
+    <div class="detail-stage">
+      <header class="detail-top">
+        <button class="icon-btn" data-detail="close" aria-label="Back to collection" title="Back (Esc)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <span class="detail-crumb" id="detailCrumb"></span>
+        <span class="mono detail-pos" id="detailPos"></span>
+        <div class="detail-nav">
+          <button class="icon-btn" data-detail="prev" aria-label="Previous item" title="Previous (←)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <button class="icon-btn" data-detail="next" aria-label="Next item" title="Next (→)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+          <button class="icon-btn" data-detail="zoom" aria-label="Toggle actual size" title="Actual size">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="detail-canvas" id="detailCanvas">
+        <img id="detailImage" alt="">
+      </div>
+    </div>
+
+    <aside class="detail-panel">
+      <div class="detail-body">
+        <div class="eyebrow" id="detailKind"></div>
+        <textarea class="detail-title" id="detailTitle" rows="1" aria-label="Title" spellcheck="false"></textarea>
+
+        <a class="source-card" id="detailSource" href="#">
+          <span class="source-icon" id="detailSourceIcon"></span>
+          <span class="source-text"><span class="source-domain" id="detailDomain"></span><span class="mono source-url" id="detailUrl"></span></span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        </a>
+        <label class="field-label" id="detailUrlEditLabel">
+          <span class="eyebrow">Source link</span>
+          <input class="field" id="detailUrlInput" type="url" placeholder="https://" spellcheck="false">
+        </label>
+
+        <div class="detail-section">
+          <div class="eyebrow">Palette — click to copy</div>
+          <div class="palette" id="detailPalette"></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="eyebrow">Tags</div>
+          <div class="tags" id="detailTags"></div>
+        </div>
+
+        <label class="detail-section field-label">
+          <span class="eyebrow">Notes</span>
+          <textarea class="field notes" id="detailNotes" placeholder="Why you saved this, where to use it…"></textarea>
+        </label>
+
+        <div class="meta" id="detailMeta"></div>
+      </div>
+
+      <footer class="detail-actions">
+        <button class="btn btn-ink" id="detailFavorite">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+          <span>Favorite</span>
+        </button>
+        <button class="icon-btn" data-detail="download" aria-label="Download" title="Save a copy">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        </button>
+        <button class="icon-btn" data-detail="move" aria-label="Move to collection" title="Move to collection">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M10 13h6M13 10l3 3-3 3"/></svg>
+        </button>
+        <button class="icon-btn" data-detail="copy" aria-label="Copy image" title="Copy image">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+        </button>
+        <button class="icon-btn danger push-right" data-detail="delete" aria-label="Delete" title="Delete">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        </button>
+      </footer>
+    </aside>
+  </section>
+
+  <div id="modalRoot"></div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

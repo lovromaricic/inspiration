@@ -1,0 +1,12 @@
+# Dependencies (recreate with `npm install`)
+node_modules/
+
+# Build output (recreate with `npm run build`)
+dist/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

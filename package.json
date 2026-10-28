@@ -1,0 +1,82 @@
+{
+  "name": "inspiration-app",
+  "version": "2.0.0",
+  "description": "A beautiful app to collect and organize visual inspiration",
+  "main": "main.js",
+  "author": "Lovro Maricic",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "build:all": "electron-builder -mwl"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "fs-extra": "^11.2.0",
+    "open-graph-scraper": "^6.8.2",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.yourname.inspiration",
+    "productName": "Inspiration",
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "icon": "assets/icon.icns",
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "title": "Inspiration ${version}",
+      "icon": "assets/icon.icns",
+      "background": "assets/dmg-background.png",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 140,
+          "y": 180
+        },
+        {
+          "x": 400,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "files": [
+      "**/*",
+      "!**/*.md",
+      "!.gitignore",
+      "!dist",
+      "!stuff",
+      "!node_modules/.cache",
+      "!icon.iconset*/**",
+      "!fonts/*.woff",
+      "!entitlements.mac.plist"
+    ],
+    "win": {
+      "icon": "assets/icon.png"
+    },
+    "linux": {
+      "icon": "assets/icon.png"
+    }
+  }
+}
