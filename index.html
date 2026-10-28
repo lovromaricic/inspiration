@@ -20,6 +20,14 @@
         <button class="nav-item" data-view="favorites"><span>Favorites</span><span class="nav-count" id="count-favorites">0</span></button>
       </nav>
 
+      <nav class="nav-group nav-tags" id="tagsGroup" aria-label="Tags" hidden>
+        <button class="eyebrow eyebrow-row tags-toggle" id="tagsToggle" aria-expanded="true" title="Show or hide tags">
+          <span>Tags</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div id="tagsList"></div>
+      </nav>
+
       <nav class="nav-group nav-collections" aria-label="Collections">
         <div class="eyebrow eyebrow-row">
           <span>Collections</span>
@@ -42,7 +50,24 @@
     </aside>
 
     <main class="main" id="mainContent">
-      <div class="drag-strip"></div>
+      <div class="drag-strip">
+        <!-- Compact header, shown once the big title has scrolled away -->
+        <div class="mini-bar" id="miniBar" inert>
+          <div class="mini-title"><span id="miniTitle">Everything</span><span class="mono mini-count" id="miniCount"></span></div>
+          <div class="header-controls">
+            <div class="segmented segmented-mini" id="miniTypeFilter" role="radiogroup" aria-label="Show">
+              <button role="radio" aria-checked="true" data-type="">All</button>
+              <button role="radio" aria-checked="false" data-type="image">Images</button>
+              <button role="radio" aria-checked="false" data-type="url">Links</button>
+            </div>
+            <button class="search search-mini" id="miniSearch" aria-label="Search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <span class="search-mini-text" id="miniSearchText">Search</span>
+              <span class="kbd"><span class="kbd-sym">⌘</span>F</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <header class="main-header">
         <div class="title-block">
           <div class="eyebrow" id="eyebrow"></div>
@@ -54,10 +79,18 @@
             <button role="radio" aria-checked="false" data-type="image">Images</button>
             <button role="radio" aria-checked="false" data-type="url">Links</button>
           </div>
-          <label class="search">
+          <div class="segmented" id="tagSort" role="radiogroup" aria-label="Sort tags">
+            <button role="radio" aria-checked="true" data-sort="count">Most used</button>
+            <button role="radio" aria-checked="false" data-sort="alpha">A–Z</button>
+          </div>
+          <label class="search tag-filter">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="tagFilter" type="search" placeholder="Filter tags" aria-label="Filter tags" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="search main-search">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
             <input id="search" type="search" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false">
-            <span class="kbd">⌘F</span>
+            <span class="kbd"><span class="kbd-sym">⌘</span>F</span>
           </label>
         </div>
       </header>
@@ -72,7 +105,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
     </button>
     <input id="quickInput" type="text" placeholder="Drop images, paste, or type a link…" aria-label="Add a link" spellcheck="false">
-    <span class="kbd kbd-dark">⌘ K</span>
+    <span class="kbd kbd-dark"><span class="kbd-sym">⌘</span>K</span>
     <button type="submit" class="command-add">Add</button>
   </form>
 

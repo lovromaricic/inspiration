@@ -192,7 +192,8 @@ function getCounts() {
   return {
     recent: db.prepare('SELECT COUNT(*) as c FROM items WHERE date_added > ?').get(thirtyDaysAgo).c,
     favorites: db.prepare('SELECT COUNT(*) as c FROM items WHERE is_favorite = 1').get().c,
-    collections: perCollection
+    collections: perCollection,
+    tags: getTagCounts()
   };
 }
 
@@ -229,6 +230,9 @@ function addItem(item) {
 
 // NEW FUNCTION - Get items with pagination (48 items per page)
 function getItemsByCollectionPaginated(collectionId, page = 1, itemsPerPage = 15, type = null) {
+  if (typeof collectionId === 'string' && collectionId.startsWith('tag:')) {
+    return getItemsByTagPaginated(collectionId.slice(4), page, itemsPerPage, type);
+  }
   if (type === 'image' || type === 'url') {
     return getItemsByTypePaginated(collectionId, page, itemsPerPage, type);
   }
@@ -346,15 +350,41 @@ function unlinkItemFiles(item) {
   });
 }
 
-// Every tag in use, most used first (tags are stored comma-separated)
-function getAllTags() {
-  const counts = {};
-  db.prepare("SELECT tags FROM items WHERE tags != ''").all().forEach(row => {
-    row.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).forEach(t => {
-      counts[t] = (counts[t] || 0) + 1;
+const splitTags = (text) => String(text || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+
+// Every tag with how many items and collections use it, most used first
+function getTagCounts() {
+  const tags = {};
+  db.prepare("SELECT tags, collection_id FROM items WHERE tags != ''").all().forEach(row => {
+    new Set(splitTags(row.tags)).forEach(t => {
+      if (!tags[t]) tags[t] = { tag: t, count: 0, collections: new Set() };
+      tags[t].count++;
+      tags[t].collections.add(row.collection_id);
     });
   });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
+  return Object.values(tags)
+    .map(t => ({ tag: t.tag, count: t.count, collections: t.collections.size }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+}
+
+// Tags are free text in one column, so match them here rather than in SQL
+function getItemsByTagPaginated(tag, page = 1, itemsPerPage = 15, type = null) {
+  const wanted = String(tag).trim().toLowerCase();
+  const typeClause = type === 'image' || type === 'url' ? ' AND type = ?' : '';
+  const matches = db.prepare(`SELECT * FROM items WHERE tags != ''${typeClause} ORDER BY date_added DESC`)
+    .all(...(typeClause ? [type] : []))
+    .filter(item => splitTags(item.tags).includes(wanted));
+  const totalItems = matches.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  return {
+    items: matches.slice((page - 1) * itemsPerPage, page * itemsPerPage),
+    pagination: { currentPage: page, totalPages, totalItems, itemsPerPage, hasNextPage: page < totalPages, hasPrevPage: page > 1 }
+  };
+}
+
+// Every tag in use, most used first (tags are stored comma-separated)
+function getAllTags() {
+  return getTagCounts().map(t => t.tag);
 }
 
 function deleteItem(id) {

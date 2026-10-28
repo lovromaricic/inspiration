@@ -142,6 +142,8 @@ input, textarea { font: inherit; color: inherit; user-select: text; }
   color: var(--muted);
   white-space: nowrap;
 }
+.kbd-sym { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12px; line-height: 1; }
+.kbd-sym:not(:last-child) { margin-right: 4px; }
 
 .icon-btn {
   width: 36px; height: 36px;
@@ -232,7 +234,36 @@ body.overlay-open .app .drag-strip { -webkit-app-region: no-drag; }
 .nav-group { display: flex; flex-direction: column; gap: 1px; }
 .nav-group .eyebrow { padding: 0 10px 8px; }
 .eyebrow-row { display: flex; justify-content: space-between; align-items: center; }
+/* Line the + up with the ⋯ button on collection rows (both 22px, 6px from the edge) */
+.nav-group .eyebrow-row { padding-right: 6px; }
 .nav-collections { margin-top: 26px; min-height: 0; flex: 1; overflow-y: auto; }
+.nav-tags { margin-top: 26px; }
+.tags-toggle { width: 100%; text-align: left; }
+.tags-toggle svg { transition: transform 150ms ease; }
+.tags-toggle:hover { color: var(--text-2); }
+.nav-tags.collapsed .tags-toggle svg { transform: rotate(-90deg); }
+.nav-tags.collapsed #tagsList { display: none; }
+.nav-tag .nav-name { font-family: var(--mono); font-size: 12.5px; }
+.tag-hash { color: var(--faint); }
+
+/* All tags page: swaps the type filter and search for sort and filter */
+#tagSort, .header-controls .tag-filter { display: none; }
+.main.is-tags-page #tagSort, .main.is-tags-page .header-controls .tag-filter { display: flex; }
+.main.is-tags-page #typeFilter, .main.is-tags-page .main-search, .main.is-tags-page .mini-bar .header-controls { display: none; }
+.grid.is-tags { display: block; }
+.tag-row {
+  width: 100%;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 14px; color: var(--text);
+  text-align: left;
+  transition: padding 150ms ease, background 120ms ease;
+}
+.tag-row:last-child { border-bottom: 1px solid var(--line); }
+.tag-row:hover { background: var(--chip); padding: 13px 12px; border-radius: 6px; }
+.tag-row-count { font-size: 11.5px; color: var(--faint); }
+.tag-list-empty { color: var(--muted); font-size: 14px; padding: 24px 0; }
 .nav-item {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   width: 100%;
@@ -283,7 +314,34 @@ body.overlay-open .app .drag-strip { -webkit-app-region: no-drag; }
   padding: 0 56px 140px;
   position: relative;
 }
-.main > .drag-strip { position: sticky; top: 0; margin: 0 -56px; z-index: 2; height: 44px; }
+.main > .drag-strip {
+  position: sticky; top: 0; margin: 0 -56px; z-index: 2; height: 52px;
+  margin-bottom: -8px; /* keep the header where it was with the taller strip */
+  border-bottom: 1px solid transparent;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.main.is-scrolled > .drag-strip {
+  background: var(--bg);
+  border-bottom-color: var(--line);
+}
+.mini-bar {
+  height: 100%;
+  padding: 0 56px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.main.is-scrolled .mini-bar { opacity: 1; }
+.main.is-scrolled .mini-bar button { -webkit-app-region: no-drag; }
+.mini-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.mini-title > span:first-child { font-family: var(--serif); font-size: 22px; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-title em { font-style: italic; color: var(--muted); }
+.mini-count { font-size: 10.5px; color: var(--faint); flex-shrink: 0; }
+.segmented-mini { padding: 2px; }
+.segmented-mini button { padding: 4px 10px; }
+.search-mini { height: 30px; cursor: text; text-align: left; }
+.search-mini-text { flex: 1; min-width: 0; font-size: 13px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-mini-text.has-query { color: var(--text); }
 .main-header {
   display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
   margin-bottom: 36px;
@@ -537,8 +595,10 @@ body.overlay-open .app .drag-strip { -webkit-app-region: no-drag; }
   background: var(--chip); color: var(--text-2);
   display: inline-flex; align-items: center; gap: 4px;
 }
-.tag button { width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--faint); font-size: 13px; line-height: 1; }
-.tag button:hover { background: var(--line); color: var(--text); }
+.tag-link { color: inherit; font: inherit; }
+.tag-link:hover { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+.tag [data-remove-tag] { width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--faint); font-size: 13px; line-height: 1; }
+.tag [data-remove-tag]:hover { background: var(--line); color: var(--text); }
 .tag-input {
   border: 0; outline: none; background: none;
   font-size: 12.5px; min-width: 90px; flex: 1;
@@ -735,7 +795,8 @@ body.overlay-open .app .drag-strip { -webkit-app-region: no-drag; }
 @media (max-width: 1180px) {
   .page-title { font-size: 56px; }
   .main { padding: 0 36px 140px; }
-  .main > .drag-strip { margin: 0 -36px; }
+  .main > .drag-strip { margin: 0 -36px -8px; }
+  .mini-bar { padding: 0 36px; }
   .search { width: 200px; }
 }
 

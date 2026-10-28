@@ -32,7 +32,9 @@ const state = {
   totalItems: 0,
   loading: false,
   detailIndex: -1,
-  allTags: []
+  allTags: [],
+  tagSort: 'count',
+  tagFilter: ''
 };
 
 const $ = (id) => document.getElementById(id);
@@ -171,6 +173,55 @@ async function refreshCounts() {
     if (el) el.textContent = (state.counts.collections[c.id] || 0).toLocaleString();
   });
   $('storageMeta').textContent = `${all.toLocaleString()} ITEMS · LOCAL`;
+  renderTagsNav();
+  if (state.view === 'tags') renderTagsPage();
+}
+
+// Views: 'all' | 'recent' | 'favorites' | collection id | 'tag:<name>' | 'tags'
+const tagOf = (view) => typeof view === 'string' && view.startsWith('tag:') ? view.slice(4) : null;
+
+let tagsCollapsed = false;
+try { tagsCollapsed = localStorage.getItem('tagsCollapsed') === '1'; } catch (e) {}
+
+// Five most-used tags, the open tag if it isn't one of them, then All tags
+function renderTagsNav() {
+  const tags = state.counts.tags || [];
+  $('tagsGroup').hidden = tags.length === 0;
+  $('tagsGroup').classList.toggle('collapsed', tagsCollapsed);
+  $('tagsToggle').setAttribute('aria-expanded', String(!tagsCollapsed));
+  const current = tagOf(state.view);
+  const shown = tags.slice(0, 5);
+  const open = tags.find(t => t.tag === current);
+  if (open && !shown.includes(open)) shown.push(open);
+  const row = (view, label, count) => `
+    <button class="nav-item${!state.query && state.view === view ? ' active' : ''}${label ? ' nav-tag' : ''}" data-view="${esc(view)}">
+      <span class="nav-label"><span class="nav-name">${label || 'All tags'}</span></span>
+      <span class="nav-count">${count.toLocaleString()}</span>
+    </button>`;
+  $('tagsList').innerHTML = shown.map(t => row(`tag:${t.tag}`, `<span class="tag-hash">#</span>${esc(t.tag)}`, t.count)).join('')
+    + row('tags', '', tags.length);
+}
+
+function renderTagsPage() {
+  const grid = $('grid');
+  const q = state.tagFilter.trim().toLowerCase().replace(/^#/, '');
+  let tags = (state.counts.tags || []).filter(t => t.tag.includes(q));
+  if (state.tagSort === 'alpha') tags = [...tags].sort((a, b) => a.tag.localeCompare(b.tag));
+  grid.classList.remove('is-empty');
+  grid.classList.add('is-tags');
+  masonry.columns = [];
+  if (!state.counts.tags?.length) {
+    grid.innerHTML = '<p class="tag-list-empty">No tags yet. Add some from an item’s details and they’ll show up here.</p>';
+  } else if (!tags.length) {
+    grid.innerHTML = `<p class="tag-list-empty">No tags match “${esc(state.tagFilter.trim())}”.</p>`;
+  } else {
+    grid.innerHTML = tags.map(t => `
+      <button class="tag-row" data-view="tag:${esc(t.tag)}">
+        <span><span class="tag-hash">#</span>${esc(t.tag)}</span>
+        <span class="tag-row-count">${t.count.toLocaleString()}</span>
+      </button>`).join('');
+  }
+  document.querySelectorAll('#tagSort button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.sort === state.tagSort)));
 }
 
 function renderSidebar() {
@@ -187,6 +238,7 @@ function renderSidebar() {
   document.querySelectorAll('.sidebar .nav-group:first-of-type .nav-item').forEach(el => {
     el.classList.toggle('active', !state.query && el.dataset.view === String(state.view));
   });
+  renderTagsNav();
 }
 
 // ---------- Header ----------
@@ -204,16 +256,45 @@ function renderHeader() {
     const c = collectionById(state.view);
     title.textContent = c ? c.name : 'Collection';
     eyebrow.textContent = `COLLECTION — ${n} ${label}`;
+  } else if (state.view === 'tags') {
+    const used = (state.counts.tags || []).length;
+    title.textContent = 'All tags';
+    eyebrow.textContent = `TAGS — ${used.toLocaleString()} IN USE`;
+  } else if (tagOf(state.view) !== null) {
+    const tag = tagOf(state.view);
+    const spread = (state.counts.tags || []).find(t => t.tag === tag)?.collections || 0;
+    title.innerHTML = `<em>#</em>${esc(tag)}`;
+    eyebrow.textContent = `TAG — ${n} ${label}` + (spread > 1 ? ` IN ${spread} COLLECTIONS` : '');
   } else {
     title.textContent = VIEW_NAMES[state.view];
     const extra = state.view === 'recent' ? ' — LAST 30 DAYS' : '';
     eyebrow.textContent = `LIBRARY — ${n} ${label}${extra}`;
   }
 
-  document.querySelectorAll('#typeFilter button').forEach(b => {
+  $('mainContent').classList.toggle('is-tags-page', state.view === 'tags' && !state.query);
+  $('miniTitle').innerHTML = title.innerHTML;
+  $('miniCount').textContent = state.view === 'tags' ? '' : n;
+  $('miniSearchText').textContent = state.query || 'Search';
+  $('miniSearchText').classList.toggle('has-query', !!state.query);
+
+  document.querySelectorAll('#typeFilter button, #miniTypeFilter button').forEach(b => {
     b.setAttribute('aria-checked', String(b.dataset.type === state.type));
   });
   $('dropTarget').textContent = `TO ${(collectionById(defaultCollectionId())?.name || 'MY COLLECTION').toUpperCase()}`;
+}
+
+// The mono font draws ⌘ and ↵ tiny; show them in the system font instead
+function kbdKeys(keys) {
+  return keys.replace(/([⌘↵]) ?/g, '<span class="kbd-sym">$1</span>');
+}
+
+// Search lives in the big header; from further down, glide back up to it
+function focusSearch() {
+  const main = $('mainContent');
+  if (main.scrollTop > 0) main.scrollTo({ top: 0, behavior: 'smooth' });
+  const field = main.classList.contains('is-tags-page') ? $('tagFilter') : $('search');
+  field.focus({ preventScroll: true });
+  field.select();
 }
 
 // ---------- Grid ----------
@@ -336,7 +417,12 @@ async function loadItems(reset = true) {
   if (state.loading) return;
   state.loading = true;
   try {
-    if (state.query) {
+    $('grid').classList.remove('is-tags');
+    if (state.view === 'tags' && !state.query) {
+      state.items = [];
+      state.page = state.totalPages = state.totalItems = 0;
+      renderTagsPage();
+    } else if (state.query) {
       let results = await invoke('search-items', state.query);
       if (state.type) results = results.filter(i => i.type === state.type);
       state.items = results;
@@ -384,6 +470,8 @@ async function setView(view) {
   state.view = view;
   state.query = '';
   $('search').value = '';
+  state.tagFilter = '';
+  $('tagFilter').value = '';
   renderSidebar();
   $('mainContent').scrollTop = 0;
   await loadItems(true);
@@ -632,7 +720,7 @@ const saveDetailField = debounce(async (field, value) => {
 function renderDetailTags() {
   const tags = parseTags(detailItem.tags);
   $('detailTags').innerHTML = tags.map((t, i) => `
-    <span class="tag">${esc(t)}<button data-remove-tag="${i}" aria-label="Remove tag ${esc(t)}">×</button></span>
+    <span class="tag"><button class="tag-link" data-open-tag="${esc(t.toLowerCase())}" title="Show everything tagged ${esc(t)}">${esc(t)}</button><button data-remove-tag="${i}" aria-label="Remove tag ${esc(t)}">×</button></span>
   `).join('') + '<input class="tag-input" id="detailTagInput" placeholder="+ Add tag" aria-label="Add tag" spellcheck="false">';
 }
 
@@ -641,7 +729,7 @@ function setDetailTags(tags) {
   detailItem.tags = value;
   const item = state.items.find(i => i.id === detailItem.id);
   if (item) item.tags = value;
-  invoke('update-item', detailItem.id, { tags: value });
+  invoke('update-item', detailItem.id, { tags: value }).then(refreshCounts);
   renderDetailTags();
   $('detailTagInput').focus();
 }
@@ -666,7 +754,10 @@ async function openDetail(index) {
   $('detailCanvas').classList.remove('actual');
   $('detailImage').src = fileUrl(base.file_path);
   $('detailImage').alt = base.title || '';
-  $('detailCrumb').textContent = state.query ? 'Search' : (typeof state.view === 'number' ? collectionById(state.view)?.name : VIEW_NAMES[state.view]);
+  $('detailCrumb').textContent = state.query ? 'Search'
+    : typeof state.view === 'number' ? collectionById(state.view)?.name
+    : tagOf(state.view) !== null ? `#${tagOf(state.view)}`
+    : VIEW_NAMES[state.view];
   $('detailPos').textContent = `${index + 1} / ${state.totalItems.toLocaleString()}`;
   $('detailKind').textContent = `${base.type === 'url' ? 'LINK' : 'IMAGE'} · ADDED ${formatDate(base.date_added).toUpperCase()}`;
   $('detailTitle').value = base.title || '';
@@ -810,6 +901,13 @@ function setupDetail() {
     if (hex) {
       invoke('copy-text', hex.dataset.hex);
       toast(`Copied ${hex.dataset.hex}`);
+    }
+
+    const openTag = e.target.closest('[data-open-tag]');
+    if (openTag) {
+      closeDetail();
+      setView(`tag:${openTag.dataset.openTag}`);
+      return;
     }
 
     const rm = e.target.closest('[data-remove-tag]');
@@ -977,7 +1075,7 @@ async function openAddLink(prefill = '') {
       </div>
       <div class="dialog-footer">
         <span class="hint"><span class="kbd">↵</span>Save</span>
-        <span class="hint"><span class="kbd">⌘ ↵</span>Save and open</span>
+        <span class="hint"><span class="kbd">${kbdKeys('⌘ ↵')}</span>Save and open</span>
         <span class="hint"><span class="kbd">esc</span>Cancel</span>
         <span class="spacer"></span>
         <button class="btn btn-ghost" data-act="cancel">Cancel</button>
@@ -1331,7 +1429,7 @@ async function openSettings(section = 'appearance') {
       <p class="sub">Keep your hands on the keyboard.</p>
       <div class="shortcut-list">
         ${[['Add a link', '⌘ K'], ['Paste image or link', '⌘ V'], ['Search', '⌘ F'], ['New collection', '⌘ N'], ['Settings', '⌘ ,'], ['Previous / next item', '← →'], ['Close', 'esc']]
-          .map(([k, v]) => `<div><span>${k}</span><span class="kbd">${v}</span></div>`).join('')}
+          .map(([k, v]) => `<div><span>${k}</span><span class="kbd">${kbdKeys(v)}</span></div>`).join('')}
       </div>
     `,
     about: () => `
@@ -1532,12 +1630,41 @@ function setupEvents() {
   $('storageBtn').addEventListener('click', () => invoke('open-storage-folder'));
 
   // Filter and search
-  $('typeFilter').addEventListener('click', (e) => {
+  const onTypeClick = (e) => {
     const b = e.target.closest('[data-type]');
     if (!b) return;
     state.type = b.dataset.type;
+    $('mainContent').scrollTop = 0;
     loadItems(true);
+  };
+  $('typeFilter').addEventListener('click', onTypeClick);
+  $('miniTypeFilter').addEventListener('click', onTypeClick);
+  $('miniSearch').addEventListener('click', focusSearch);
+
+  // Tags: collapse the sidebar section, sort and filter the All tags page
+  $('tagsToggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    tagsCollapsed = !tagsCollapsed;
+    try { localStorage.setItem('tagsCollapsed', tagsCollapsed ? '1' : '0'); } catch (err) {}
+    renderTagsNav();
   });
+  $('tagSort').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sort]');
+    if (!b) return;
+    state.tagSort = b.dataset.sort;
+    renderTagsPage();
+  });
+  $('tagFilter').addEventListener('input', () => {
+    state.tagFilter = $('tagFilter').value;
+    renderTagsPage();
+  });
+
+  // Compact header once the big title is out of view (under the 52px strip)
+  new IntersectionObserver(([entry]) => {
+    const scrolled = !entry.isIntersecting;
+    $('mainContent').classList.toggle('is-scrolled', scrolled);
+    $('miniBar').inert = !scrolled;
+  }, { root: $('mainContent'), rootMargin: '-52px 0px 0px 0px' }).observe($('collectionTitle'));
   const runSearch = debounce(() => {
     state.query = $('search').value.trim();
     renderSidebar();
@@ -1562,6 +1689,11 @@ function setupEvents() {
     }
     if (e.target.closest('[data-empty="pick"]')) {
       pickImages();
+      return;
+    }
+    const tagRow = e.target.closest('.tag-row');
+    if (tagRow) {
+      setView(tagRow.dataset.view);
       return;
     }
     const card = e.target.closest('.card');
@@ -1620,8 +1752,7 @@ function setupEvents() {
     if (mod && e.key.toLowerCase() === 'f') {
       e.preventDefault();
       if (!$('detail').hidden) closeDetail();
-      $('search').focus();
-      $('search').select();
+      focusSearch();
       return;
     }
     if (mod && e.key === ',') {
