@@ -14,6 +14,8 @@ const {
   updateItem,
   setItemMeta,
   moveItemToCollection,
+  setItemThumbnail,
+  getItemsWithoutThumbnail,
   getAllTags,
   createCollection,
   getAllCollections,
@@ -150,6 +152,7 @@ function decideStartup() {
 
 app.whenReady().then(async () => {
   startupState = decideStartup();
+  if (startupState.status === 'ok') backfillThumbnails();
 
   // The packaged app gets its icon from assets/icon.icns; show it in the Dock during development too
   if (process.platform === 'darwin' && !app.isPackaged) {
@@ -290,8 +293,37 @@ async function extractPalette(imagePath, count = 5) {
   return picked.map(c => `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`.toUpperCase());
 }
 
-// Palette, dimensions and file size for an item's image
+// Grid thumbnails: wide enough for the spacious density on a Retina screen.
+// Decoding full 1920px images while scrolling is what made the grid stutter.
+const THUMB_WIDTH = 720;
+
+function thumbPathFor(imagePath) {
+  return imagePath.replace(/\.[^./]+$/, '') + '.thumb.jpg';
+}
+
+async function makeThumbnail(id, imagePath) {
+  const thumbPath = thumbPathFor(imagePath);
+  try {
+    await sharp(imagePath)
+      .resize(THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toFile(thumbPath);
+    setItemThumbnail(id, thumbPath);
+  } catch (error) {
+    console.error('Error creating thumbnail:', error);
+  }
+}
+
+// One pass over older items, in the background after startup
+async function backfillThumbnails() {
+  for (const item of getItemsWithoutThumbnail()) {
+    if (fs.existsSync(item.file_path)) await makeThumbnail(item.id, item.file_path);
+  }
+}
+
+// Palette, dimensions and file size for an item's image, plus its grid thumbnail
 async function computeItemMeta(id, imagePath) {
+  await makeThumbnail(id, imagePath);
   try {
     const [palette, metadata, stat] = await Promise.all([
       extractPalette(imagePath),
@@ -651,6 +683,7 @@ ipcMain.handle('setup-storage', async (event, mode) => {
     await fs.ensureDir(target);
     initializeDatabase(target);
     startupState = { status: 'ok' };
+    if (existing) backfillThumbnails();
     const counts = getCounts();
     const items = Object.values(counts.collections).reduce((a, b) => a + b, 0);
     return { success: true, path: target, existing, items };
@@ -709,12 +742,16 @@ ipcMain.handle('move-item', async (event, id, collectionId) => {
   try {
     const item = getItem(id);
     if (!item) return { success: false, error: 'Item not found' };
-    let newPath = item.file_path;
-    if (item.file_path && fs.existsSync(item.file_path)) {
-      newPath = path.join(getCollectionFolderPath(collectionId), path.basename(item.file_path));
-      await fs.move(item.file_path, newPath, { overwrite: false });
-    }
-    moveItemToCollection(id, collectionId, newPath);
+    const folder = getCollectionFolderPath(collectionId);
+    const moveFile = async (from) => {
+      if (!from || !fs.existsSync(from)) return from;
+      const to = path.join(folder, path.basename(from));
+      await fs.move(from, to, { overwrite: false });
+      return to;
+    };
+    const newPath = await moveFile(item.file_path);
+    const newThumbPath = item.thumbnail_path === item.file_path ? newPath : await moveFile(item.thumbnail_path);
+    moveItemToCollection(id, collectionId, newPath, newThumbPath);
     return { success: true };
   } catch (error) {
     console.error('Error moving item:', error);

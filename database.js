@@ -168,16 +168,8 @@ function getAllCollections() {
 
 function deleteCollection(id) {
   if (id === 1) return false;
-  const items = db.prepare('SELECT file_path FROM items WHERE collection_id = ?').all(id);
-  items.forEach(item => {
-    if (item.file_path && fs.existsSync(item.file_path)) {
-      try {
-        fs.unlinkSync(item.file_path);
-      } catch (err) {
-        console.error('Error deleting file:', err);
-      }
-    }
-  });
+  const items = db.prepare('SELECT file_path, thumbnail_path FROM items WHERE collection_id = ?').all(id);
+  items.forEach(unlinkItemFiles);
   db.prepare('DELETE FROM collections WHERE id = ?').run(id);
   return true;
 }
@@ -327,9 +319,31 @@ function setItemMeta(id, meta) {
     .run(JSON.stringify(meta.palette || []), meta.width || null, meta.height || null, meta.file_size || null, id);
 }
 
-function moveItemToCollection(id, collectionId, newPath) {
+function moveItemToCollection(id, collectionId, newPath, newThumbPath) {
   db.prepare('UPDATE items SET collection_id = ?, file_path = ?, thumbnail_path = ? WHERE id = ?')
-    .run(collectionId, newPath, newPath, id);
+    .run(collectionId, newPath, newThumbPath || newPath, id);
+}
+
+function setItemThumbnail(id, thumbPath) {
+  db.prepare('UPDATE items SET thumbnail_path = ? WHERE id = ?').run(thumbPath, id);
+}
+
+// Items from before v2.0.3 show the full image in the grid
+function getItemsWithoutThumbnail() {
+  return db.prepare("SELECT id, file_path FROM items WHERE file_path != '' AND (thumbnail_path = file_path OR thumbnail_path = '')").all();
+}
+
+// Remove an item's image and its grid thumbnail
+function unlinkItemFiles(item) {
+  [item.file_path, item.thumbnail_path].forEach(p => {
+    if (p && fs.existsSync(p)) {
+      try {
+        fs.unlinkSync(p);
+      } catch (err) {
+        console.error('Error deleting file:', err);
+      }
+    }
+  });
 }
 
 // Every tag in use, most used first (tags are stored comma-separated)
@@ -344,14 +358,8 @@ function getAllTags() {
 }
 
 function deleteItem(id) {
-  const item = db.prepare('SELECT file_path FROM items WHERE id = ?').get(id);
-  if (item && item.file_path && fs.existsSync(item.file_path)) {
-    try {
-      fs.unlinkSync(item.file_path);
-    } catch (err) {
-      console.error('Error deleting file:', err);
-    }
-  }
+  const item = db.prepare('SELECT file_path, thumbnail_path FROM items WHERE id = ?').get(id);
+  if (item) unlinkItemFiles(item);
   return db.prepare('DELETE FROM items WHERE id = ?').run(id);
 }
 
@@ -392,6 +400,8 @@ module.exports = {
   updateItem,
   setItemMeta,
   moveItemToCollection,
+  setItemThumbnail,
+  getItemsWithoutThumbnail,
   getAllTags,
   getStorageInfo,
   createCollection,

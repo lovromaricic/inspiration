@@ -224,7 +224,7 @@ function cardHtml(item, index, isNew) {
   return `
     <article class="card${isNew ? ' is-new' : ''}" data-index="${index}" tabindex="0" draggable="true" aria-label="${esc(item.title || 'Untitled')}">
       <div class="card-art">
-        <img src="${fileUrl(item.thumbnail_path)}" alt=""${ratio} loading="lazy" draggable="false">
+        <img src="${fileUrl(item.thumbnail_path)}" alt=""${ratio} loading="lazy" decoding="async" draggable="false">
         <button class="card-fav${item.is_favorite ? ' on' : ''}" data-fav="${item.id}" aria-label="${item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="${item.is_favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
         </button>
