@@ -70,7 +70,8 @@
       "!node_modules/.cache",
       "!icon.iconset*/**",
       "!fonts/*.woff",
-      "!entitlements.mac.plist"
+      "!entitlements.mac.plist",
+      "!docs/**"
     ],
     "win": {
       "icon": "assets/icon.png"
