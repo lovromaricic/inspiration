@@ -13,6 +13,18 @@ A quiet desktop app for collecting visual inspiration: images, links and notes, 
   </tr>
 </table>
 
+## Install
+
+1. Download the latest `.dmg` from [Releases](https://github.com/lovromaricic/inspiration/releases).
+2. Open it and drag **Inspiration** into **Applications**.
+
+Requires a Mac with Apple silicon (M1 or later).
+
+> [!NOTE]
+> The app isn't notarized by Apple yet, so the first time you open it macOS says it can't verify that the app is free of malware. Click **Done**, then go to **System Settings › Privacy & Security**, scroll down, and click **Open Anyway** next to the message about Inspiration. You only need to do this once.
+>
+> Prefer not to? Build it yourself from source (see below); apps you build on your own Mac open normally.
+
 ## Features
 
 - Drop, paste (⌘V) or pick images; paste or type links (⌘K) to save a page with its cover image
@@ -34,7 +46,7 @@ npm start
 npm run build
 ```
 
-Builds a macOS `.dmg` into `dist/` with electron-builder.
+Builds an Apple silicon `.dmg` into `dist/` with electron-builder. To share it without the **Open Anyway** step, it needs to be signed with a Developer ID certificate and notarized by Apple.
 
 ## Project structure
 
